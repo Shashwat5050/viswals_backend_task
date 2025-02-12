@@ -7,10 +7,9 @@ import (
 	"io"
 	"strconv"
 	"sync"
-	"time"
 
 	csvhelper "github.com/viswals_backend_task/core/csv-helper"
-	"github.com/viswals_backend_task/core/models"
+	"github.com/viswals_backend_task/core/dto"
 	"go.uber.org/zap"
 )
 
@@ -33,7 +32,7 @@ func (p *Producer) PublishCSVData(ctx context.Context, filePath string) error {
 		return err
 	}
 
-	userDataCh := make(chan models.UserDetails, 100)
+	userDataCh := make(chan dto.RawUserData, 100)
 
 	totalWorkers := 5
 
@@ -83,7 +82,7 @@ func (p *Producer) PublishCSVData(ctx context.Context, filePath string) error {
 
 }
 
-func (p *Producer) PublishUserDataToQueue(ctx context.Context, userdata models.UserDetails) error {
+func (p *Producer) PublishUserDataToQueue(ctx context.Context, userdata dto.RawUserData) error {
 
 	message, err := json.Marshal(userdata)
 	if err != nil {
@@ -103,13 +102,13 @@ func (p *Producer) PublishUserDataToQueue(ctx context.Context, userdata models.U
 	return nil
 }
 
-func (p *Producer) ConvertCSVRecordToUserData(ctx context.Context, record []string) (models.UserDetails, error) {
-	userData := models.UserDetails{}
+func (p *Producer) ConvertCSVRecordToUserData(ctx context.Context, record []string) (dto.RawUserData, error) {
+	userData := dto.RawUserData{}
 	var err error
 
 	// Parses id
 	if len(record) >= 1 {
-		userData.ID, err = strconv.ParseInt(record[0], 10, 64)
+		userData.Id, err = strconv.ParseInt(record[0], 10, 64)
 		if err != nil {
 			p.logger.Error("invalid id in record", zap.Error(err))
 			return userData, fmt.Errorf("invalid id in record: %w", err)
@@ -128,7 +127,7 @@ func (p *Producer) ConvertCSVRecordToUserData(ctx context.Context, record []stri
 
 	// Parse email
 	if len(record) >= 4 {
-		userData.EmailAddress = record[3]
+		userData.Email = record[3]
 	}
 
 	// Parse created_at
@@ -170,17 +169,10 @@ func (p *Producer) ConvertCSVRecordToUserData(ctx context.Context, record []stri
 	return userData, nil
 }
 
-func parseTimestamp(value string) (*time.Time, error) {
+func parseTimestamp(value string) (int64, error) {
 	if value == "" {
-		return nil, nil // Return 0 if the timestamp is empty
+		return 0, nil // Return 0 if the timestamp is empty
 	}
 
-	timestamp, err := strconv.ParseInt(value, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert int64 to time.Time
-	t := time.Unix(timestamp, 0).UTC()
-	return &t, nil
+	return strconv.ParseInt(value, 10, 64)
 }

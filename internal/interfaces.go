@@ -4,10 +4,26 @@ import (
 	"context"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/viswals_backend_task/core/models"
 )
 
 type MessageBroker interface {
 	Publish(ctx context.Context, message []byte) error
 	Consume() (<-chan amqp.Delivery, error)
 	Close() error
+}
+
+
+type userStoreProvider interface {
+	GetUserByID(context.Context, string) (*models.UserDetails, error)
+	CreateUser(context.Context, *models.UserDetails) error
+	GetAllUsers(context.Context) ([]*models.UserDetails, error)
+	DeleteUser(context.Context, string) error
+	ListUsers(context.Context, int64, int64) ([]*models.UserDetails, error)
+}
+
+type cacheStoreProvider interface {
+	Get(context.Context, string) (*models.UserDetails, error)
+	Set(context.Context, string, *models.UserDetails) error
+	Delete(context.Context, string) error
 }
